@@ -10,7 +10,20 @@ use std::{
 };
 use tokio::net;
 
-pub fn load_certs(paths: Vec<PathBuf>, disable_native: bool) -> Result<RootCertStore, Error> {
+#[allow(unused_mut)]
+pub fn load_certs(mut paths: Vec<PathBuf>, disable_native: bool) -> Result<RootCertStore, Error> {
+    #[cfg(target_os = "android")]
+    {
+        if let Ok(dir) = fs::read_dir("/system/etc/security/cacerts") {
+            let sys_certs = dir.filter_map(|r| r.ok());
+            for cert in sys_certs {
+                if let Some(str) = cert.path().to_str() {
+                    paths.push(str.parse().unwrap());
+                }
+            }
+        }
+    }
+
     let mut certs = RootCertStore::empty();
 
     for path in &paths {
